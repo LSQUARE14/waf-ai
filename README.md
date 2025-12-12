@@ -6,21 +6,20 @@ This is an AI system (kinda like a plugin) that aims at:
     - Chain attacks
     - Complex payloads 
     - 0-day & 1-day exploits (every one has a dream, right ?)
----
+  
 ## Author
 
 - Tran Dinh Hoang Long
 - Thai Phan Minh Hoang
 - Le Dinh Vu
 - Tran Duy Long
----
+
 ## Specs
 
 For demonstration, we use **ModSecurity WAF** as a based WAF with blank `.conf` file to demonstrate how the MCP server will produce additional and adaptive rules for the attack context. Relevant system information wil be updated over time.
 
 ## Prequisites
 - Docker Engine
-
 
 ## Setup
 
