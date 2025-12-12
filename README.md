@@ -23,9 +23,9 @@ For demonstration, we use **ModSecurity WAF** as a based WAF with blank `.conf` 
 
 ## Setup
 
-1. After cloning the project, navigate to `/waf`
-2. Running the command `docker compose up -d --build`
-3. Acccess the WAF at `localhost:8000`
+1. After cloning the project, navigate to `/project` where the `docker-compose.yaml` file located.
+3. Running the command `docker compose up -d --build`
+4. Acccess the WAF at `localhost:8000`
 
 ## Current stage & Prgress
 
