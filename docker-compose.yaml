@@ -1,0 +1,5 @@
+services:
+  waf:
+    build: waf/.
+    ports:
+      - "8888:80"
