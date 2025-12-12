@@ -27,7 +27,7 @@ For demonstration, we use **ModSecurity WAF** as a based WAF with blank `.conf` 
 3. Running the command `docker compose up -d --build`
 4. Acccess the WAF at `localhost:8000`
 
-## Current stage & Prgress
+## Current stage & Progress
 
 - [X] Demonstrated WAF system is completed.
 - [ ] Merging the LM and LLM models.
