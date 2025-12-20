@@ -3,3 +3,6 @@ services:
     build: waf/.
     ports:
       - "8888:80"
+    volumes:
+      - ./web/:/var/www/html
+      - ./waf/modsec/:/etc/apache2/modsecurity.d/
