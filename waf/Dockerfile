@@ -6,12 +6,13 @@ RUN apt-get update -y
 
 # Install Required Dependencies
 RUN apt-get install -y g++ flex bison curl apache2-dev \
-	doxygen libyajl-dev ssdeep liblua5.2-dev \
-	libgeoip-dev libtool dh-autoreconf \
-	libcurl4-gnutls-dev libxml2 libpcre++-dev \
-	libxml2-dev git wget tar apache2 \
-	php libapache2-mod-php
-
+    doxygen libyajl-dev ssdeep liblua5.2-dev \
+    libgeoip-dev libtool dh-autoreconf \
+    libcurl4-gnutls-dev libxml2 libpcre++-dev \
+    libxml2-dev git wget tar apache2 \
+    php libapache2-mod-php \
+    iputils-ping
+	
 # Download LibModsecurity 
 RUN wget https://github.com/SpiderLabs/ModSecurity/releases/download/v3.0.4/modsecurity-v3.0.4.tar.gz
 
