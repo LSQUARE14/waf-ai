@@ -6,3 +6,5 @@ services:
     volumes:
       - ./web/:/var/www/html
       - ./waf/modsec/:/etc/apache2/modsecurity.d/
+      - ./waf/log/modsec_audit.log:/var/log/apache2/modsec_audit.log
+      - ./waf/log/error.log:/var/log/apache2/error.log
