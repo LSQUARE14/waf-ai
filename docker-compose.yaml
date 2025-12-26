@@ -6,6 +6,7 @@ services:
     volumes:
       - ./web/:/var/www/html
       - ./waf/modsec/:/etc/apache2/modsecurity.d/
+      - ./waf/custom/:/etc/apache2/modsecurity.d/custom/
       - ./waf/log/modsec_audit.log:/var/log/apache2/modsec_audit.log
       - ./waf/log/error.log:/var/log/apache2/error.log
 
@@ -16,5 +17,6 @@ services:
       - "5000:5000"
     volumes:
       - ./ai:/app
+      - ./waf/custom:/rules/
+    environment:
     command: python run.py
-    restart: always

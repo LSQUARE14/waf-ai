@@ -9,4 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN ln -s /usr/bin/python3 /usr/local/bin/python
+
+EXPOSE 5000
+
 CMD ["python3", "run.py"]
