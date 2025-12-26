@@ -14,18 +14,18 @@ RUN apt-get install -y g++ flex bison curl apache2-dev \
     iputils-ping
 	
 # Download LibModsecurity 
-RUN wget https://github.com/SpiderLabs/ModSecurity/releases/download/v3.0.4/modsecurity-v3.0.4.tar.gz
+RUN wget https://github.com/owasp-modsecurity/ModSecurity/releases/download/v3.0.14/modsecurity-v3.0.14.tar.gz
 
 # Extract the Downloaded File
-RUN tar xzf modsecurity-v3.0.4.tar.gz && rm -rf modsecurity-v3.0.4.tar.gz
+RUN tar xzf modsecurity-v3.0.14.tar.gz && rm -rf modsecurity-v3.0.14.tar.gz
 
 # Compile and Install LibModsecurity
-RUN cd modsecurity-v3.0.4 && \
+RUN cd modsecurity-v3.0.14 && \
 	./build.sh && ./configure && \
 	make && make install
 
 # Install ModSecurity-Apache Connector
-RUN cd ~ && git clone https://github.com/SpiderLabs/ModSecurity-apache
+RUN cd ~ && git clone https://github.com/owasp-modsecurity/ModSecurity-apache
 
 RUN cd ~/ModSecurity-apache && \
 	./autogen.sh && \
@@ -38,8 +38,8 @@ RUN echo "LoadModule security3_module /usr/lib/apache2/modules/mod_security3.so"
 
 # Configure ModSecurity
 RUN mkdir /etc/apache2/modsecurity.d && \
-	cp modsecurity-v3.0.4/modsecurity.conf-recommended /etc/apache2/modsecurity.d/modsecurity.conf && \
-	cp modsecurity-v3.0.4/unicode.mapping /etc/apache2/modsecurity.d/ && \
+	cp modsecurity-v3.0.14/modsecurity.conf-recommended /etc/apache2/modsecurity.d/modsecurity.conf && \
+	cp modsecurity-v3.0.14/unicode.mapping /etc/apache2/modsecurity.d/ && \
 	sed -i 's/SecRuleEngine DetectionOnly/SecRuleEngine On/' /etc/apache2/modsecurity.d/modsecurity.conf
 ADD modsec_rules.conf /etc/apache2/modsecurity.d/
 
